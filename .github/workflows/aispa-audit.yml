@@ -23,20 +23,11 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
 
-            - name: Audit subagent prompts
-              id: audit-subagents
+            - name: AISPA Audit
+              id: audit
               uses: XiangningLin/aispa-audit-action@main
               with:
-                  prompts-dir: openhands-tools/openhands/tools/preset/subagents
-                  threshold: 70
-                  comment-on-pr: "true"
-
-            - name: Audit workflow prompts
-              id: audit-workflows
-              if: always()
-              uses: XiangningLin/aispa-audit-action@main
-              with:
-                  prompts-dir: .github/prompts
+                  prompts-dir: "openhands-tools/openhands/tools/preset/subagents, .github/prompts"
                   threshold: 70
                   comment-on-pr: "true"
 
@@ -49,7 +40,7 @@ jobs:
                   secure: true
                   username: ${{ secrets.MAIL_USERNAME }}
                   password: ${{ secrets.MAIL_PASSWORD }}
-                  subject: "AISPA Audit Report - ${{ steps.audit-subagents.outputs.status || 'ERROR' }} - ${{ github.repository }}"
+                  subject: "AISPA Audit Report - ${{ steps.audit.outputs.status || 'ERROR' }} - ${{ github.repository }}"
                   to: rosielin.xl@gmail.com
                   from: AISPA Audit Bot <${{ secrets.MAIL_USERNAME }}>
                   body: |
@@ -62,8 +53,7 @@ jobs:
                     Triggered by: ${{ github.actor }}
                     Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-                    Subagent Prompts: ${{ steps.audit-subagents.outputs.status || 'ERROR' }}
-                    Workflow Prompts: ${{ steps.audit-workflows.outputs.status || 'ERROR' }}
+                    Overall Status: ${{ steps.audit.outputs.status || 'ERROR' }}
 
                     ----------------------------------------
                     Full report is available as a PR comment or in the workflow logs.
@@ -85,12 +75,8 @@ jobs:
                     <h3>Results</h3>
                     <table>
                       <tr>
-                        <td>Subagent Prompts</td>
-                        <td><b>${{ steps.audit-subagents.outputs.status || 'ERROR' }}</b></td>
-                      </tr>
-                      <tr>
-                        <td>Workflow Prompts</td>
-                        <td><b>${{ steps.audit-workflows.outputs.status || 'ERROR' }}</b></td>
+                        <td>Overall Status</td>
+                        <td><b>${{ steps.audit.outputs.status || 'ERROR' }}</b></td>
                       </tr>
                     </table>
                     <p><a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View full audit report →</a></p>
