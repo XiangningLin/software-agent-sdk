@@ -24,18 +24,75 @@ jobs:
               uses: actions/checkout@v4
 
             - name: Audit subagent prompts
+              id: audit-subagents
               uses: XiangningLin/aispa-audit-action@main
               with:
                   prompts-dir: openhands-tools/openhands/tools/preset/subagents
                   threshold: 70
-                  api-key: ${{ secrets.AISPA_API_KEY }}
                   comment-on-pr: "true"
 
             - name: Audit workflow prompts
+              id: audit-workflows
               if: always()
               uses: XiangningLin/aispa-audit-action@main
               with:
                   prompts-dir: .github/prompts
                   threshold: 70
-                  api-key: ${{ secrets.AISPA_API_KEY }}
                   comment-on-pr: "true"
+
+            - name: Send audit report via email
+              if: always()
+              uses: dawidd6/action-send-mail@v3
+              with:
+                  server_address: smtp.gmail.com
+                  server_port: 465
+                  secure: true
+                  username: ${{ secrets.MAIL_USERNAME }}
+                  password: ${{ secrets.MAIL_PASSWORD }}
+                  subject: "AISPA Audit Report - ${{ steps.audit-subagents.outputs.status || 'ERROR' }} - ${{ github.repository }}"
+                  to: rosielin.xl@gmail.com
+                  from: AISPA Audit Bot <${{ secrets.MAIL_USERNAME }}>
+                  body: |
+                    AISPA System Prompt Audit Report
+                    ================================
+
+                    Repository: ${{ github.repository }}
+                    Branch: ${{ github.head_ref || github.ref_name }}
+                    Commit: ${{ github.sha }}
+                    Triggered by: ${{ github.actor }}
+                    Run URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+                    Subagent Prompts: ${{ steps.audit-subagents.outputs.status || 'ERROR' }}
+                    Workflow Prompts: ${{ steps.audit-workflows.outputs.status || 'ERROR' }}
+
+                    ----------------------------------------
+                    Full report is available as a PR comment or in the workflow logs.
+                    Please review the audit results and approve/reject the changes.
+
+                    Action required:
+                    - If PASSED: Review the report and approve the PR
+                    - If FAILED: Check the critical issues and request changes
+
+                    View full details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                  html_body: |
+                    <h2>AISPA System Prompt Audit Report</h2>
+                    <table>
+                      <tr><td><b>Repository</b></td><td>${{ github.repository }}</td></tr>
+                      <tr><td><b>Branch</b></td><td>${{ github.head_ref || github.ref_name }}</td></tr>
+                      <tr><td><b>Commit</b></td><td><code>${{ github.sha }}</code></td></tr>
+                      <tr><td><b>Triggered by</b></td><td>${{ github.actor }}</td></tr>
+                    </table>
+                    <h3>Results</h3>
+                    <table>
+                      <tr>
+                        <td>Subagent Prompts</td>
+                        <td><b>${{ steps.audit-subagents.outputs.status || 'ERROR' }}</b></td>
+                      </tr>
+                      <tr>
+                        <td>Workflow Prompts</td>
+                        <td><b>${{ steps.audit-workflows.outputs.status || 'ERROR' }}</b></td>
+                      </tr>
+                    </table>
+                    <p><a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View full audit report →</a></p>
+                    <hr>
+                    <p><i>Please review and approve/reject. Detailed findings are in the PR comment.</i></p>
