@@ -1,0 +1,41 @@
+name: AISPA Prompt Audit
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - "openhands-tools/openhands/tools/preset/subagents/**"
+            - ".github/prompts/**"
+    pull_request:
+        branches: ["**"]
+        paths:
+            - "openhands-tools/openhands/tools/preset/subagents/**"
+            - ".github/prompts/**"
+    workflow_dispatch:
+
+jobs:
+    audit-prompts:
+        runs-on: ubuntu-24.04
+        permissions:
+            pull-requests: write
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Audit subagent prompts
+              uses: XiangningLin/aispa-audit-action@main
+              with:
+                  prompts-dir: openhands-tools/openhands/tools/preset/subagents
+                  threshold: 70
+                  api-key: ${{ secrets.AISPA_API_KEY }}
+                  comment-on-pr: "true"
+
+            - name: Audit workflow prompts
+              if: always()
+              uses: XiangningLin/aispa-audit-action@main
+              with:
+                  prompts-dir: .github/prompts
+                  threshold: 70
+                  api-key: ${{ secrets.AISPA_API_KEY }}
+                  comment-on-pr: "true"
